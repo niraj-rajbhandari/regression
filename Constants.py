@@ -4,3 +4,4 @@ DATA_FILE = "kc_house_data.csv"
 OUTPUT_FEATURE = "price"
 MULTIPLE_FEATURES = [ "sqft_living", "sqft_lot", "bedrooms", "bathrooms"]
 SINGLE_FEATURE = ["sqft_living"]
+FOLD_COUNT = 10

@@ -82,12 +82,11 @@ class Regression(object):
         :param lamda: penalty factor for high magnitude in ridge regression
         :return: list of new coefficients of selected model
         """
-
-        training_data = data if len(data) !=0 else self.data
+        training_data = self.data if data.empty else data
 
         weight_count = degree+1 if len(self.features) == 1 else len(self.features)+1
         weight_matrix = self.initialize_weights(weight_count)
-        feature_matrix = self._get_feature_matrix(degree=degree, data=data)
+        feature_matrix = self._get_feature_matrix(degree=degree, data=training_data)
         actual_output_matrix = self._get_output_matrix(training_data)
 
         for iteration in range(1,self.iterations):
@@ -118,7 +117,7 @@ class Regression(object):
         test_error = {} if is_ridge else []
 
         for test_set_count in range(0, fold_count):
-            test_data, remaining_data = self._partition_data(self.data, test_cv_limit, test_cv_offset)
+            remaining_data, test_data = self._partition_data(self.data, test_cv_limit, test_cv_offset)
             rem_data_size = len(remaining_data)
             unit_validation_fold_size = rem_data_size / fold_count
             val_cv_limit = unit_validation_fold_size
@@ -128,7 +127,7 @@ class Regression(object):
                 lamda_errors = {}
                 for lamda in lambda_list:
                     for validation_set_count in range(0, fold_count):
-                        validation_data, training_data = self._partition_data(remaining_data, val_cv_limit, val_cv_offset)
+                        training_data ,validation_data = self._partition_data(remaining_data, val_cv_limit, val_cv_offset)
                         """
                         TODO: train the regression model with training data and validate the generated model
                         """
@@ -137,13 +136,15 @@ class Regression(object):
                         val_cv_limit += unit_validation_fold_size
             else:
                 trained_weight_list = self.regression(is_ridge=is_ridge, degree=degree, data=remaining_data)
-                test_error[test_set_count] = self.calculate_error(data=test_data, weight_list=trained_weight_list, degree=degree)
+                rmse = self.calculate_error(data=test_data, weight_list=trained_weight_list, degree=degree)
+                test_error.append(rmse)
 
             """
             TODO: test the validated model with the test data
             """
             test_cv_offset = test_cv_limit
             test_cv_limit += unit_test_fold_size
+        return test_error
 
     @staticmethod
     def _partition_data(data,test_set_end_index, test_set_start_index=0):
@@ -173,7 +174,8 @@ class Regression(object):
         weights = np.array(weight_list).T
         rss_i = np.dot(feature_matrix,weights)
         rss_ii = np.subtract(output_matrix, rss_i)
-        rss_final = np.dot(rss_ii.T, rss_ii)
+        rss_iii = np.dot(rss_ii.T, rss_ii)
+        rss_final = np.divide(rss_iii, len(data))
         return self.square_root(rss_final)
 
     def get_data_size(self):
@@ -188,12 +190,9 @@ class Regression(object):
         """
         Calculates the square root of a number
         :param number: number whose square root is to be calculated
-        :return: squareroot of the number
+        :return: square root of the number
         """
-        if number.replace('.', '', 1).isdigit():
-            return number**(1/2.0)
-        else:
-            raise ValueError("Please provide a number to square_root function")
+        return pow(number, 0.5)
 
 
 
