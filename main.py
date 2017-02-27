@@ -62,9 +62,19 @@ def cross_validate(is_ridge=False):
 
     return
 
+
 def ridge_regression():
-    print "Still working on it"
-    pass
+    degree, multi_feature = _regression_option()
+
+    if degree != 0:
+        input_features = Constants.MULTIPLE_FEATURES if multi_feature else Constants.SINGLE_FEATURE
+
+        regression = Regression(Constants.DATA_FILE, actual_output=Constants.OUTPUT_FEATURE, features=input_features,
+                                iterations=Constants.ITERATIONS, step_size=Constants.STEP_SIZE)
+        coefficients = regression.regression(is_ridge=True, degree=degree)
+        print coefficients
+
+    return
 
 
 def _regression_option():

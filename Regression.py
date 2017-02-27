@@ -83,20 +83,25 @@ class Regression(object):
         :return: list of new coefficients of selected model
         """
         training_data = self.data if data.empty else data
-
         weight_count = degree+1 if len(self.features) == 1 else len(self.features)+1
         weight_matrix = self.initialize_weights(weight_count)
         feature_matrix = self._get_feature_matrix(degree=degree, data=training_data)
         actual_output_matrix = self._get_output_matrix(training_data)
+        local_step_size = self.step_size
 
-        for iteration in range(1,self.iterations):
+        for iteration in range(1, self.iterations):
             if iteration % 2 == 0:
-                self.step_size /= pow(iteration,4)  # decrease stepsize by i^4 every second iteration
+                local_step_size /= pow(iteration,4)  # decrease stepsize by i^4 every second iteration
             rss_gradient_ii = np.dot(feature_matrix, weight_matrix)  # Hw
             rss_gradient_iii = np.subtract(actual_output_matrix, rss_gradient_ii.T)  # y-Hw
             rss_gradient_final = np.dot(feature_matrix.T, rss_gradient_iii)  # Ht(y-Hw) => Gradient of RSS
-            new_weight_i = (2*self.step_size) / feature_matrix.shape[0]  # (2*step_size)/N
+            new_weight_i = (2*local_step_size) / feature_matrix.shape[0]  # (2*step_size)/N
             new_weight_ii = np.multiply(new_weight_i,rss_gradient_final)  # (2*step_size*Ht(y-Hw)) / N
+
+            if is_ridge:
+                weight_penalizer = self.get_ridge_weight_penalizer(weight_count, local_step_size,lamda)
+                weight_matrix = np.multiply(weight_matrix,weight_penalizer)  # (1-2*step_size*lamda)*w_old
+
             weight_matrix = np.add(weight_matrix,new_weight_ii)  # w + (2*step_size*Ht(y-Hw)) / N
 
         return weight_matrix.tolist()
@@ -198,6 +203,17 @@ class Regression(object):
         :return: square root of the number
         """
         return pow(number, 0.5)
+
+    def get_ridge_weight_penalizer(self, weight_count, step_size, lamda):
+        weight_penalizer = []
+        penalizer = 1 - 2*step_size*lamda
+        for index in range(0,weight_count):
+            if index == 0:
+                weight_penalizer.append(1)
+            else:
+                weight_penalizer.append(penalizer)
+        return weight_penalizer
+
 
 
 
