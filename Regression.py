@@ -119,11 +119,11 @@ class Regression(object):
         for test_set_count in range(0, fold_count):
             remaining_data, test_data = self._partition_data(self.data, test_cv_limit, test_cv_offset)
             rem_data_size = len(remaining_data)
-            unit_validation_fold_size = rem_data_size / fold_count
-            val_cv_limit = unit_validation_fold_size
-            val_cv_offset = 0
 
             if is_ridge:
+                unit_validation_fold_size = rem_data_size / fold_count
+                val_cv_limit = unit_validation_fold_size
+                val_cv_offset = 0
                 lamda_errors = {}
                 for lamda in lambda_list:
                     for validation_set_count in range(0, fold_count):
@@ -158,6 +158,11 @@ class Regression(object):
         data_size = len(data)
         test_set = data.iloc[test_set_start_index:test_set_end_index]
         training_set = data.iloc[test_set_end_index: data_size]
+
+        if test_set_start_index != 0:
+            training_set_i = data.iloc[0:test_set_start_index]
+            data_frames = [training_set_i,training_set]
+            training_set = panda.concat(data_frames)
 
         return training_set, test_set
 
