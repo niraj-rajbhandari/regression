@@ -70,7 +70,7 @@ class Regression(object):
 
         return feature_matrix
 
-    def regression(self,is_ridge=False, degree=Constants.DEFAULT_DEGREE, data=panda.DataFrame({'A': []}), lamda=Constants.LAMBDA):
+    def regression(self, is_ridge=False, degree=Constants.DEFAULT_DEGREE, data=panda.DataFrame({'A': []}), lamda=Constants.LAMBDA):
         """
         Performs Gradient Descent to select a model
         :param is_ridge: is the type of regression ridge
@@ -119,7 +119,7 @@ class Regression(object):
         test_error = {} if is_ridge else []
 
         for test_set_count in range(0, fold_count):
-            remaining_data, test_data = self._partition_data(self.data, test_cv_limit, test_cv_offset)
+            remaining_data, test_data = self.partition_data(self.data, test_cv_limit, test_cv_offset)
             rem_data_size = len(remaining_data)
 
             if is_ridge:
@@ -130,17 +130,18 @@ class Regression(object):
                 for lamda in lambda_list:
                     validation_rmse_dict = {}
                     for validation_set_count in range(0, fold_count):
-                        training_data, validation_data = self._partition_data(remaining_data, val_cv_limit, val_cv_offset)
-                        trained_weight_list = self.regression(is_ridge=is_ridge, degree=degree,data=training_data,lamda=lamda)
+                        training_data, validation_data = self.partition_data(remaining_data, val_cv_limit, val_cv_offset)
+                        trained_weight_list = self.regression(is_ridge, degree, training_data,lamda)
                         validation_rmse_dict[lamda] = self.calculate_error(validation_data, trained_weight_list, degree)
 
                         val_cv_offset = val_cv_limit
                         val_cv_limit += unit_validation_fold_size
-                    minimum_error_lambda = min(validation_rmse_dict,validation_rmse_dict.get)
+
+                    minimum_error_lambda = min(validation_rmse_dict, validation_rmse_dict.get)
                     selected_lambda[minimum_error_lambda] = validation_rmse_dict.get(minimum_error_lambda)
 
                 for lam, weights in selected_lambda.iteritems():
-                    test_error[lam] = self.calculate_error(data=test_data, is_ridge=is_ridge, degree=degree, weight_list=weights, lamda=lam)
+                    test_error[lam] = self.calculate_error(test_data, weights, degree, lam, is_ridge)
 
             else:
                 trained_weight_list = self.regression(is_ridge=is_ridge, degree=degree, data=remaining_data)
@@ -149,10 +150,11 @@ class Regression(object):
 
             test_cv_offset = test_cv_limit
             test_cv_limit += unit_test_fold_size
+
         return test_error
 
     @staticmethod
-    def _partition_data(data,test_set_end_index, test_set_start_index=0):
+    def partition_data(data, test_set_end_index, test_set_start_index=0):
         """
         Partitions the data into training and test set
         :param data: data to be partitioned

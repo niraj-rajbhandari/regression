@@ -1,44 +1,31 @@
-
 import sys
 from Regression import Regression
 import Constants
 
 
 def main():
-    print "***************************************************************************************************"
-    print "*                                            Regression                                           *"
-    print "***************************************************************************************************"
-    while True:
-        print "\n\n\t1. Least Square Regression "
-        print "\t2. Cross Validate Least Square Regression"
-        print "\t3. Ridge Regression"
-        print "\t4. Select Model from Ridge Regression"
-        print "\t5. Exit\n"
-        # try:
-        if True:
-            user_choice = int(raw_input("\tPlease select your option (1 - 5) : "))
-            if user_choice == 1:
-                least_square_regression()
-            elif user_choice == 2:
-                cross_validate()
-            elif user_choice == 3:
-                ridge_regression()
-            elif user_choice == 4:
-                cross_validate(True)
-            elif user_choice == 5:
-                break
-            else:
-                raise ValueError("Invalid option")
-        # except ValueError as err:
-        #     print err
-        #     print "\n\n\tERROR: Please select a correct option."
+    arguments = sys.argv
+    if len(arguments) > 2:
+        print "Invalid command line arguments"
+    elif len(arguments) == 2:
+        if arguments[1] == "--menu" or arguments[1] == "-m":
+            menu()
+        elif arguments[1] == "--help" or arguments[1] == "-h":
+            help_menu(arguments[0])
+        else:
+            print "Invalid command line arguments"
+    else:
+        calculate_everything()
     return
 
 
-def least_square_regression():
-
-    degree, multi_feature = _regression_option()
-
+def least_square_regression(degree=Constants.DEFAULT_DEGREE, multi_feature=False):
+    """
+    Least Square regression
+    :param degree: degree of the regression model
+    :param multi_feature: does it have multiple feature
+    :return:
+    """
     if degree != 0:
         input_features = Constants.MULTIPLE_FEATURES if multi_feature else Constants.SINGLE_FEATURE
 
@@ -49,8 +36,8 @@ def least_square_regression():
     return
 
 
-def cross_validate(is_ridge=False):
-    degree, multi_feature = _regression_option()
+def cross_validate(is_ridge=False, degree=Constants.DEFAULT_DEGREE, multi_feature=False):
+
     if degree != 0:
         input_features = Constants.MULTIPLE_FEATURES if multi_feature else Constants.SINGLE_FEATURE
 
@@ -63,7 +50,7 @@ def cross_validate(is_ridge=False):
     return
 
 
-def ridge_regression():
+def ridge_regression(degree=Constants.DEFAULT_DEGREE, multi_feature=False):
     degree, multi_feature = _regression_option()
 
     if degree != 0:
@@ -109,6 +96,53 @@ def _regression_option():
 
     return degree, multi_feature
 
+
+def menu():
+    print "***************************************************************************************************"
+    print "*                                            Regression                                           *"
+    print "***************************************************************************************************"
+    while True:
+        print "\n\n\t1. Least Square Regression "
+        print "\t2. Cross Validate Least Square Regression"
+        print "\t3. Ridge Regression"
+        print "\t4. Select Model from Ridge Regression"
+        print "\t5. Exit\n"
+        try:
+            user_choice = int(raw_input("\tPlease select your option (1 - 5) : "))
+            if user_choice == 1:
+                degree, multiple_feature = _regression_option()
+                least_square_regression(degree, multiple_feature)
+            elif user_choice == 2:
+                degree, multiple_feature = _regression_option()
+                cross_validate(is_ridge=False, degree=degree, multi_feature=multiple_feature)
+            elif user_choice == 3:
+                degree, multiple_feature = _regression_option()
+                ridge_regression(degree=degree, multi_feature=multiple_feature)
+            elif user_choice == 4:
+                degree, multiple_feature = _regression_option()
+                cross_validate(True, degree, multiple_feature)
+            elif user_choice == 5:
+                break
+            else:
+                raise ValueError("Invalid option")
+        except ValueError as err:
+            print err
+            print "\n\n\tERROR: Please select a correct option."
+
+
+def help_menu(filename):
+    print "\nHELP: "
+    print "====="
+    print "Command : python " + filename + " [options]"
+    print "\n\t Options:"
+    print "\t ========"
+    print "\t -m | --menu : Displays a menu"
+    print "\t -h | --help : Displays the help\n"
+
+
+def calculate_everything():
+    print "calculate everything here"
+    pass
 
 if __name__ == "__main__":
     main()
