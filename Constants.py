@@ -1,7 +1,13 @@
-ITERATIONS = 100000
+ITERATIONS = 10000
 STEP_SIZE = 1.0e-14
 DATA_FILE = "kc_house_data.csv"
 OUTPUT_FEATURE = "price"
 MULTIPLE_FEATURES = [ "sqft_living", "sqft_lot", "bedrooms", "bathrooms"]
 SINGLE_FEATURE = ["sqft_living"]
 FOLD_COUNT = 10
+LAMBDA = 0.1
+DEFAULT_DEGREE = 1
+FEATURE_MATRIX_FIRST_COL_VAL = 1
+COLUMN_AXIS = 1
+ROW_AXIS = 0
+DEFAULT_WEIGHT = 0

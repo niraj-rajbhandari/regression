@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as panda
-import pdb
+
+import Constants
 
 
 class Regression(object):
@@ -18,11 +19,7 @@ class Regression(object):
 
     """
 
-    FEATURE_MATRIX_FIRST_COL_VAL = 1
-    COLUMN_AXIS = 1
-    ROW_AXIS = 0
-
-    def __init__(self,data_file,actual_output, step_size=1.0e-10, features=[], iterations=10000):
+    def __init__(self, data_file, actual_output, step_size=Constants.STEP_SIZE, features=[], iterations=Constants.ITERATIONS):
         if len(features) == 0:
             raise RuntimeError("Please select the feature to build the model")
 
@@ -36,7 +33,7 @@ class Regression(object):
         else:
             self.data = panda.read_csv(data_file)
 
-        self.features.remove("price")
+        self.features.remove(actual_output)
 
     @staticmethod
     def initialize_weights(weight_count):
@@ -57,7 +54,7 @@ class Regression(object):
         output_matrix = data[self.actual_output].as_matrix()
         return output_matrix.T
 
-    def _get_feature_matrix(self, data, degree=1 ):
+    def _get_feature_matrix(self, data, degree=Constants.DEFAULT_DEGREE):
         """
         Gets the feature matrix
         :param degree: degree of the model to be selected
@@ -67,13 +64,13 @@ class Regression(object):
         temp_feature_matrix = feature_matrix
         for deg in range(2, degree+1):
             powered_feature = np.power(feature_matrix,deg)
-            temp_feature_matrix = np.concatenate((temp_feature_matrix,powered_feature), axis=self.COLUMN_AXIS)
+            temp_feature_matrix = np.concatenate((temp_feature_matrix,powered_feature), axis=Constants.COLUMN_AXIS)
 
-        feature_matrix = np.insert(temp_feature_matrix, 0, self.FEATURE_MATRIX_FIRST_COL_VAL, axis=self.COLUMN_AXIS) # adds 1 to the start of all the rows
+        feature_matrix = np.insert(temp_feature_matrix, Constants.DEFAULT_WEIGHT, Constants.FEATURE_MATRIX_FIRST_COL_VAL, axis=Constants.COLUMN_AXIS) # adds 1 to the start of all the rows
 
         return feature_matrix
 
-    def regression(self,is_ridge=False, degree=1, data=panda.DataFrame({'A': []}), lamda=0.1):
+    def regression(self,is_ridge=False, degree=Constants.DEFAULT_DEGREE, data=panda.DataFrame({'A': []}), lamda=Constants.LAMBDA):
         """
         Performs Gradient Descent to select a model
         :param is_ridge: is the type of regression ridge
@@ -106,7 +103,7 @@ class Regression(object):
 
         return weight_matrix.tolist()
 
-    def cross_validate(self, fold_count, lambda_list=[0.1], is_ridge=False, degree=1):
+    def cross_validate(self, fold_count, lambda_list=[Constants.LAMBDA], is_ridge=False, degree=Constants.DEFAULT_DEGREE):
         """
         Nested cross validation for the regression
         :param fold_count: value of k in k-fold-cross-validation
@@ -126,27 +123,30 @@ class Regression(object):
             rem_data_size = len(remaining_data)
 
             if is_ridge:
+                selected_lambda = {}
                 unit_validation_fold_size = rem_data_size / fold_count
                 val_cv_limit = unit_validation_fold_size
                 val_cv_offset = 0
-                lamda_errors = {}
                 for lamda in lambda_list:
+                    validation_rmse_dict = {}
                     for validation_set_count in range(0, fold_count):
-                        training_data ,validation_data = self._partition_data(remaining_data, val_cv_limit, val_cv_offset)
-                        """
-                        TODO: train the regression model with training data and validate the generated model
-                        """
+                        training_data, validation_data = self._partition_data(remaining_data, val_cv_limit, val_cv_offset)
                         trained_weight_list = self.regression(is_ridge=is_ridge, degree=degree,data=training_data,lamda=lamda)
+                        validation_rmse_dict[lamda] = self.calculate_error(validation_data, trained_weight_list, degree)
+
                         val_cv_offset = val_cv_limit
                         val_cv_limit += unit_validation_fold_size
+                    minimum_error_lambda = min(validation_rmse_dict,validation_rmse_dict.get)
+                    selected_lambda[minimum_error_lambda] = validation_rmse_dict.get(minimum_error_lambda)
+
+                for lam, weights in selected_lambda.iteritems():
+                    test_error[lam] = self.calculate_error(data=test_data, is_ridge=is_ridge, degree=degree, weight_list=weights, lamda=lam)
+
             else:
                 trained_weight_list = self.regression(is_ridge=is_ridge, degree=degree, data=remaining_data)
                 rmse = self.calculate_error(data=test_data, weight_list=trained_weight_list, degree=degree)
                 test_error.append(rmse)
 
-            """
-            TODO: test the validated model with the test data
-            """
             test_cv_offset = test_cv_limit
             test_cv_limit += unit_test_fold_size
         return test_error
@@ -171,12 +171,13 @@ class Regression(object):
 
         return training_set, test_set
 
-    def calculate_error(self, data, weight_list, degree):
+    def calculate_error(self, data, weight_list, degree, lamda=Constants.LAMBDA, is_ridge=False):
         """
         Calculate the error of the regression model
         :param data: test data
         :param weight_list: lists of weight for the model
         :param degree: degree of the regression model
+        :param is_ridge: checks if the regression is ridge
         :return: Root mean square error (RMSE)
         """
         feature_matrix = self._get_feature_matrix(degree=degree, data=data)
@@ -185,6 +186,11 @@ class Regression(object):
         rss_i = np.dot(feature_matrix,weights)
         rss_ii = np.subtract(output_matrix, rss_i)
         rss_iii = np.dot(rss_ii.T, rss_ii)
+
+        if is_ridge:
+            weights_square = np.dot(weights.T, weights)
+            rss_iii = np.add(rss_iii, np.multiply(weights_square, lamda))
+
         rss_final = np.divide(rss_iii, len(data))
         return self.square_root(rss_final)
 
