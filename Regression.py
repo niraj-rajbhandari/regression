@@ -88,11 +88,11 @@ class Regression(object):
 
         for iteration in range(1, self.iterations):
             if iteration % 2 == 0:
-                local_step_size /= pow(iteration,4)  # decrease stepsize by i^4 every second iteration
+                local_step_size /= pow(iteration, 4)  # decrease stepsize by i^4 every second iteration
             rss_gradient_ii = np.dot(feature_matrix, weight_matrix)  # Hw
             rss_gradient_iii = np.subtract(actual_output_matrix, rss_gradient_ii.T)  # y-Hw
             rss_gradient_final = np.dot(feature_matrix.T, rss_gradient_iii)  # Ht(y-Hw) => Gradient of RSS
-            new_weight_i = (2*local_step_size) / feature_matrix.shape[0]  # (2*step_size)/N
+            new_weight_i = (2*local_step_size) / feature_matrix.shape[Constants.ROW_AXIS]  # (2*step_size)/N
             new_weight_ii = np.multiply(new_weight_i,rss_gradient_final)  # (2*step_size*Ht(y-Hw)) / N
 
             if is_ridge:

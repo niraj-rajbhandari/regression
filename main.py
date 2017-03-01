@@ -31,9 +31,9 @@ def least_square_regression(degree=Constants.DEFAULT_DEGREE, multi_feature=False
 
         regression = Regression(Constants.DATA_FILE, actual_output=Constants.OUTPUT_FEATURE,features=input_features,iterations=Constants.ITERATIONS, step_size=Constants.STEP_SIZE)
         coefficients = regression.regression(is_ridge=False, degree=degree)
-        print coefficients
-
-    return
+        return coefficients
+    else:
+        raise RuntimeError("Please provide the degree of the regression model")
 
 
 def cross_validate(is_ridge=False, degree=Constants.DEFAULT_DEGREE, multi_feature=False):
@@ -44,10 +44,10 @@ def cross_validate(is_ridge=False, degree=Constants.DEFAULT_DEGREE, multi_featur
         regression = Regression(Constants.DATA_FILE, actual_output=Constants.OUTPUT_FEATURE, features=input_features,
                                 iterations=Constants.ITERATIONS, step_size=Constants.STEP_SIZE)
         error = regression.cross_validate(fold_count=Constants.FOLD_COUNT, degree=degree)
-        print "RMSE: "
-        print error
 
-    return
+        return error
+    else:
+        raise RuntimeError("Please provide the degree of the regression model")
 
 
 def ridge_regression(degree=Constants.DEFAULT_DEGREE, multi_feature=False):
@@ -59,9 +59,10 @@ def ridge_regression(degree=Constants.DEFAULT_DEGREE, multi_feature=False):
         regression = Regression(Constants.DATA_FILE, actual_output=Constants.OUTPUT_FEATURE, features=input_features,
                                 iterations=Constants.ITERATIONS, step_size=Constants.STEP_SIZE)
         coefficients = regression.regression(is_ridge=True, degree=degree)
-        print coefficients
+        return coefficients
+    else:
+        raise RuntimeError("Please provide the degree of the regression model")
 
-    return
 
 
 def _regression_option():
@@ -141,8 +142,27 @@ def help_menu(filename):
 
 
 def calculate_everything():
-    print "calculate everything here"
-    pass
+    print "1. Least Square Regression"
+    print "==========================="
+
+    print "\n ======================================================"
+    print "i. wo + w1 * (sqft_living) + w2 * (sqft_living)[2] :"
+    lsr_square_coefficient = least_square_regression(2)
+    print "TrainedCoefficients :"
+    print lsr_square_coefficient
+
+    print "\n ======================================================"
+    print "ii. wo + w1 * (sqft_living) + w2 * (sqft_living)[2] + w3 * (sqft_living)[3] + w4 * (sqft_living)[4] :"
+    lsr_forth_coefficient = least_square_regression(4)
+    print "TrainedCoefficients :"
+    print lsr_forth_coefficient
+
+    print "\n ======================================================"
+    print "iii. wo + w1 * (sqft_living) + w2 * (sqft_living) + w3 * (sqft_lot) + w4 * (bedrooms) + w5 * (bathrooms) :"
+    lsr_multi_feature_coefficient = least_square_regression(multi_feature=True)
+    print "TrainedCoefficients :"
+    print lsr_multi_feature_coefficient
+
 
 if __name__ == "__main__":
     main()
