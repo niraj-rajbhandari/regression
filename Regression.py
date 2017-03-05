@@ -20,20 +20,22 @@ class Regression(object):
     """
 
     def __init__(self, data_file, actual_output, step_size=Constants.STEP_SIZE, features=[], iterations=Constants.ITERATIONS):
-        if len(features) == 0:
-            raise RuntimeError("Please select the feature to build the model")
 
         self.step_size = step_size
         self.iterations = iterations
         self.actual_output = actual_output
         self.features = features
-        self.features.append(actual_output)
-        if len(features) > 0:
-            self.data = panda.read_csv(data_file, usecols=self.features)
-        else:
-            self.data = panda.read_csv(data_file)
 
-        self.features.remove(actual_output)
+        self.data_file = data_file
+        self.data = panda.DataFrame({'A': []})
+
+    def set_features(self, features):
+        self.features = features
+        self.features.append(self.actual_output)
+
+        self.data = panda.read_csv(self.data_file, usecols=self.features)
+
+        self.features.remove(self.actual_output)
 
     @staticmethod
     def initialize_weights(weight_count):
@@ -79,6 +81,10 @@ class Regression(object):
         :param lamda: penalty factor for high magnitude in ridge regression
         :return: list of new coefficients of selected model
         """
+
+        if len(self.features) == 0 or len(self.data) == 0:
+            raise RuntimeError("Please set the features through set_feature() method")
+
         training_data = self.data if data.empty else data
         weight_count = degree+1 if len(self.features) == 1 else len(self.features)+1
         weight_matrix = self.initialize_weights(weight_count)
@@ -112,36 +118,45 @@ class Regression(object):
         :param degree: degree of the regression model
         :return: list of weights and lambda that have been cross validated and tested
         """
+
+        if len(self.features) == 0 or len(self.data) == 0:
+            raise RuntimeError("Please set the features through set_feature() method")
+
         data_size = self.get_data_size()
         unit_test_fold_size = data_size / fold_count
         test_cv_limit = unit_test_fold_size
         test_cv_offset = 0
-        test_error = {} if is_ridge else []
+        test_error = []
 
         for test_set_count in range(0, fold_count):
             remaining_data, test_data = self.partition_data(self.data, test_cv_limit, test_cv_offset)
             rem_data_size = len(remaining_data)
 
             if is_ridge:
-                selected_lambda = {}
+                validated_lambda_list = {}
+                lambda_weights = {}
                 unit_validation_fold_size = rem_data_size / fold_count
                 val_cv_limit = unit_validation_fold_size
                 val_cv_offset = 0
                 for lamda in lambda_list:
-                    validation_rmse_dict = {}
+                    validation_rmse = []
                     for validation_set_count in range(0, fold_count):
-                        training_data, validation_data = self.partition_data(remaining_data, val_cv_limit, val_cv_offset)
+                        training_data, validation_data = self.partition_data(remaining_data, val_cv_limit,
+                                                                             val_cv_offset)
                         trained_weight_list = self.regression(is_ridge, degree, training_data,lamda)
-                        validation_rmse_dict[lamda] = self.calculate_error(validation_data, trained_weight_list, degree)
+                        lambda_weights[lamda] = trained_weight_list
+                        validation_rmse.append(self.calculate_error(validation_data, trained_weight_list, degree))
 
                         val_cv_offset = val_cv_limit
                         val_cv_limit += unit_validation_fold_size
+                    avg_lambda_rmse = sum(validation_rmse) / float(len(validation_rmse))
+                    validated_lambda_list[lamda] = avg_lambda_rmse
 
-                    minimum_error_lambda = min(validation_rmse_dict, validation_rmse_dict.get)
-                    selected_lambda[minimum_error_lambda] = validation_rmse_dict.get(minimum_error_lambda)
-
-                for lam, weights in selected_lambda.iteritems():
-                    test_error[lam] = self.calculate_error(test_data, weights, degree, lam, is_ridge)
+                validated_lambda = min(validated_lambda_list.iteritems(), key=lambda x:x[1])[0]
+                test_error_dict = dict()
+                test_error_dict[validated_lambda] = self.calculate_error(test_data, lambda_weights[validated_lambda],
+                                                                    degree, validated_lambda, is_ridge)
+                test_error.append(test_error_dict)
 
             else:
                 trained_weight_list = self.regression(is_ridge=is_ridge, degree=degree, data=remaining_data)
@@ -189,9 +204,9 @@ class Regression(object):
         rss_ii = np.subtract(output_matrix, rss_i)
         rss_iii = np.dot(rss_ii.T, rss_ii)
 
-        if is_ridge:
-            weights_square = np.dot(weights.T, weights)
-            rss_iii = np.add(rss_iii, np.multiply(weights_square, lamda))
+        # if is_ridge:
+        #     weights_square = np.dot(weights.T, weights)
+        #     rss_iii = np.add(rss_iii, np.multiply(weights_square, lamda))
 
         rss_final = np.divide(rss_iii, len(data))
         return self.square_root(rss_final)
