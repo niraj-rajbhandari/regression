@@ -17,6 +17,8 @@ def main():
     for arg_index in range(1, len(arguments)):
         if arguments[arg_index] == "--data_set" or arguments[arg_index] == "-d":
             arg_index += 1
+            if arg_index > len(arguments):
+                raise RuntimeError("Please provide the path to dataset")
             data = arguments[arg_index]
         elif arguments[arg_index] == "--menu" or arguments[arg_index] == "-m":
             is_menu = True
@@ -59,7 +61,8 @@ def cross_validate(regression, is_ridge=False, degree=Constants.DEFAULT_DEGREE, 
     :return: rmse for k-fold cross validation
     """
     if degree != 0:
-        error = regression.cross_validate(is_ridge=is_ridge, fold_count=Constants.FOLD_COUNT, degree=degree)
+        error = regression.cross_validate(is_ridge=is_ridge, fold_count=Constants.FOLD_COUNT, degree=degree,
+                                          lambda_list=Constants.LAMBDA_LIST)
 
         return error
     else:
@@ -90,7 +93,7 @@ def calculate_everything(data):
     regression = Regression(data_file=data, actual_output=Constants.OUTPUT_FEATURE,
                             iterations=Constants.ITERATIONS, step_size=Constants.STEP_SIZE)
     regression.set_features(Constants.SINGLE_FEATURE)
-    """
+
     print "==========================="
     print "1. Least Square Regression"
     print "==========================="
@@ -114,9 +117,9 @@ def calculate_everything(data):
     print "\t========================"
     print_weights(lsr_multi_feature_coefficient)
 
-    print "\n================================"
-    print "2. Cross Validation Regression"
-    print "================================"
+    print "\n====================================================="
+    print "2. 10-Fold Cross Validation (Least Square Regression)"
+    print "====================================================="
 
     print "\n\ti. wo + w1 * (sqft_living) + w2 * (sqft_living)[2] :"
     regression.set_features(Constants.SINGLE_FEATURE)
@@ -161,11 +164,12 @@ def calculate_everything(data):
     print "\n\tTrained Coefficients :"
     print "\t========================"
     print_weights(ridge_multi_feature_coefficient)
-"""
+
     print "\n================================"
     print "4. Model Selection"
     print "================================"
 
+    regression.iterations = Constants.MODEL_SELECTION_ITERATION
     print "\n\ti. wo + w1 * (sqft_living) + w2 * (sqft_living)[2] :"
     regression.set_features(Constants.SINGLE_FEATURE)
     lsr_sqr_model_selection = cross_validate(regression, is_ridge=True, degree=2)
@@ -189,7 +193,7 @@ def calculate_everything(data):
 
     print "\n\tiii. wo + w1 * (sqft_living) + w2 * (sqft_lot) + w3 * (bedrooms) + w4 * (bathrooms) :"
     regression.set_features(Constants.MULTIPLE_FEATURES)
-    lsr_multi_feature_model_selection = cross_validate(regression, is_ridge=True, degree=2)
+    lsr_multi_feature_model_selection = cross_validate(regression, is_ridge=True)
     print "\n\tSelected Models :"
     print "\t========================\n"
 
@@ -270,6 +274,7 @@ def menu(data):
                 coefficients = ridge_regression(regression, degree=degree)
                 print coefficients
             elif user_choice == 4:
+                regression.iterations = Constants.MODEL_SELECTION_ITERATION
                 degree, multiple_feature = _regression_option()
                 features = Constants.MULTIPLE_FEATURES if multiple_feature else Constants.SINGLE_FEATURE
                 regression.set_features(features)

@@ -140,12 +140,16 @@ class Regression(object):
                 val_cv_offset = 0
                 for lamda in lambda_list:
                     validation_rmse = []
+                    error = None
                     for validation_set_count in range(0, fold_count):
                         training_data, validation_data = self.partition_data(remaining_data, val_cv_limit,
                                                                              val_cv_offset)
                         trained_weight_list = self.regression(is_ridge, degree, training_data,lamda)
                         lambda_weights[lamda] = trained_weight_list
-                        validation_rmse.append(self.calculate_error(validation_data, trained_weight_list, degree))
+                        local_error = self.calculate_error(validation_data, trained_weight_list, degree)
+                        if validation_set_count == 0 or (error is not None and local_error < error):
+                            validation_rmse.append(local_error)
+                            error = local_error
 
                         val_cv_offset = val_cv_limit
                         val_cv_limit += unit_validation_fold_size
@@ -155,7 +159,7 @@ class Regression(object):
                 validated_lambda = min(validated_lambda_list.iteritems(), key=lambda x:x[1])[0]
                 test_error_dict = dict()
                 test_error_dict[validated_lambda] = self.calculate_error(test_data, lambda_weights[validated_lambda],
-                                                                    degree, validated_lambda, is_ridge)
+                                                                         degree, validated_lambda, is_ridge)
                 test_error.append(test_error_dict)
 
             else:
@@ -204,9 +208,9 @@ class Regression(object):
         rss_ii = np.subtract(output_matrix, rss_i)
         rss_iii = np.dot(rss_ii.T, rss_ii)
 
-        # if is_ridge:
-        #     weights_square = np.dot(weights.T, weights)
-        #     rss_iii = np.add(rss_iii, np.multiply(weights_square, lamda))
+        if is_ridge:
+            weights_square = np.dot(weights.T, weights)
+            rss_iii = np.add(rss_iii, np.multiply(weights_square, lamda))
 
         rss_final = np.divide(rss_iii, len(data))
         return self.square_root(rss_final)
@@ -228,11 +232,19 @@ class Regression(object):
         return pow(number, 0.5)
 
     def get_ridge_weight_penalizer(self, weight_count, step_size, lamda):
+        """
+        Generates the matrix that will penalize the weights for ridge regression which will not
+        penalize the intercept
+        :param weight_count: number of weights
+        :param step_size: step size used for descent
+        :param lamda: value of lamda
+        :return: matrix with penalizer for each weight
+        """
         weight_penalizer = []
         penalizer = 1 - 2*step_size*lamda
         for index in range(0,weight_count):
             if index == 0:
-                weight_penalizer.append(1)
+                weight_penalizer.append(1.0)
             else:
                 weight_penalizer.append(penalizer)
         return weight_penalizer
